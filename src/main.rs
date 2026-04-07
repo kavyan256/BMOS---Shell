@@ -14,10 +14,15 @@ fn read_command() -> String {
 }
 
 fn handle_command(command: &str) -> bool {
-    match command {
-        "exit" => commands::exit(),
-        "echo" => commands::echo(),
-        _ => commands::error_cmd_not_fnd(command)
+    let parts: Vec<&str> = command.split_whitespace().collect();
+
+    match parts.as_slice() {
+        [] => false,
+        ["exit"] => commands::exit(),
+        ["echo", ..] => commands::echo(&parts[1..]),
+        ["type", arg] => commands::type_cmd(arg),
+        ["type"] => commands::type_cmd_err(),
+        _ => commands::cmd_not_fnd_err(parts.first().copied().unwrap_or(command))
     }
 }
 
