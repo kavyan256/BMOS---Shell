@@ -1,3 +1,9 @@
+use std::io::{self, Write};
+
 fn main() {
-    println!("hello");
+    //print the prompt
+    print!("$ ");
+
+    //because rust doesnt automatically flush stdout, we need to do it ourselves
+    io::stdout().flush().unwrap();
 }
