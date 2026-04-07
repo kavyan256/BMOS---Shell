@@ -1,6 +1,8 @@
 use std::io::{self, Write};
 
 fn main() {
+     
+    loop{ 
         //print the prompt
         print!("$ ");
 
@@ -11,4 +13,5 @@ fn main() {
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
         println!("{}: command not found", input.trim());
+    }
 }
