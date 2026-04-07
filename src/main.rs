@@ -1,9 +1,14 @@
 use std::io::{self, Write};
 
 fn main() {
-    //print the prompt
-    print!("$ ");
+        //print the prompt
+        print!("$ ");
 
-    //because rust doesnt automatically flush stdout, we need to do it ourselves
-    io::stdout().flush().unwrap();
+        //because rust doesnt automatically flush stdout, we need to do it ourselves
+        io::stdout().flush().unwrap();
+
+        //taking in the user input
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        println!("{}: command not found", input.trim());
 }
