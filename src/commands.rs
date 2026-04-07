@@ -7,3 +7,8 @@ pub fn error_cmd_not_fnd(command: &str) -> bool {
     println!("{}: command not found", command);
     false
 }
+
+pub fn echo() -> bool {
+    println!("Echoing ...");
+    false
+}
