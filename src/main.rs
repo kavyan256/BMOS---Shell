@@ -10,8 +10,16 @@ fn main() {
         io::stdout().flush().unwrap();
 
         //taking in the user input
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
-        println!("{}: command not found", input.trim());
+        let mut command = String::new();
+        io::stdin().read_line(&mut command).unwrap();
+
+        command = command.trim().to_string();
+        
+        //check for exit command
+        if command == "exit" {
+            break;
+        }
+
+        println!("{}: command not found", command.trim());
     }
 }
