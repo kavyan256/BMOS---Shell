@@ -1,0 +1,33 @@
+# Rust build artifacts
+target/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+
+# Log files
+*.log
+
+# Environment files
+.env
+.env.local
+
+# Cargo.lock is included for binary projects to ensure reproducible builds
+# Uncomment the next line if this is a library crate
+# Cargo.lock
