@@ -40,6 +40,7 @@ fn handle_command(command: &str) -> bool {
                 commands::type_cmd_err()
             }
         }
+        "pwd" => commands::pwd(),
         cmd => commands::run_external(cmd, &parts[1..]),
     }
 }

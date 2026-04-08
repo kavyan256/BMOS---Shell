@@ -4,6 +4,8 @@ use std::fs;                                //provides functions for working wit
 use std::os::unix::fs::PermissionsExt;      //provides Unix-specific extensions for working with file permissions, allowing us to check if a file is executable
 use std::process::Command;                  //allows us to execute external programs
 
+pub const BUILTINS: &[&str; 4] = &["exit", "echo", "type", "pwd"];
+
 fn find_executable_in_path(cmd: &str) -> Option<PathBuf> {
     let paths = env::var("PATH").ok()?;
     for path_dir in paths.split(':') {
@@ -34,15 +36,12 @@ pub fn echo(args: &[&str]) -> bool {
 }
 
 pub fn type_cmd(arg: &str) -> bool {
-    match arg {
-        "exit" | "echo" | "type" => println!("{} is a shell builtin", arg),
-        _ => {
-            if let Some(path) = find_executable_in_path(arg) {
-                println!("{} is {}", arg, path.display());
-            } else {
-                println!("{}: not found", arg);
-            }
-        }
+    if BUILTINS.contains(&arg) {
+        println!("{} is a shell builtin", arg);
+    } else if let Some(path) = find_executable_in_path(arg) {
+        println!("{} is {}", arg, path.display());
+    } else {
+        println!("{}: not found", arg);
     }
     false
 }
@@ -67,3 +66,10 @@ pub fn type_cmd_err() -> bool {
     false
 }
 
+pub fn pwd() -> bool {
+    match env::current_dir() {
+        Ok(path) => println!("{}", path.display()),
+        Err(e) => println!("pwd: {}", e),
+    }
+    false
+}
