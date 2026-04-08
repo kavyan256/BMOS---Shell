@@ -80,7 +80,20 @@ pub fn cd(args: &[&str]) -> bool {
         return false;
     }
     
-    env::set_current_dir(PathBuf::from(&args[0]))
+    let path = PathBuf::from(&args[0]);
+
+    if !path.exists() {
+        println!("cd: {}: No such file or directory", &args[0]);
+        return false;
+    }
+
+    if !path.is_dir() {
+        println!("cd: {}: Not a directory", &args[0]);
+        return false;
+    }
+
+    env::set_current_dir(&path)
         .unwrap_or_else(|_| println!("cd: {}: No such file or directory", &args[0]));
+    
     false
 }
