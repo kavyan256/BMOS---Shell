@@ -41,6 +41,7 @@ fn handle_command(command: &str) -> bool {
             }
         }
         "pwd" => commands::pwd(),
+        "cd" => commands::cd(&parts[1..]),
         cmd => commands::run_external(cmd, &parts[1..]),
     }
 }

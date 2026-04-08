@@ -4,7 +4,7 @@ use std::fs;                                //provides functions for working wit
 use std::os::unix::fs::PermissionsExt;      //provides Unix-specific extensions for working with file permissions, allowing us to check if a file is executable
 use std::process::Command;                  //allows us to execute external programs
 
-pub const BUILTINS: &[&str; 4] = &["exit", "echo", "type", "pwd"];
+pub const BUILTINS: &[&str; 5] = &["exit", "echo", "type", "pwd", "cd"];
 
 fn find_executable_in_path(cmd: &str) -> Option<PathBuf> {
     let paths = env::var("PATH").ok()?;
@@ -71,5 +71,16 @@ pub fn pwd() -> bool {
         Ok(path) => println!("{}", path.display()),
         Err(e) => println!("pwd: {}", e),
     }
+    false
+}
+
+pub fn cd(args: &[&str]) -> bool {
+    if args.is_empty() {
+        println!("cd: missing argument");
+        return false;
+    }
+    
+    env::set_current_dir(PathBuf::from(&args[0]))
+        .unwrap_or_else(|_| println!("cd: {}: No such file or directory", &args[0]));
     false
 }
