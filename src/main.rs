@@ -56,7 +56,7 @@ fn parse_command(command: &str) -> Vec<String> {
     // Iterate through each character in the command string
     for ch in command.chars() {
         match ch {
-            '\'' => in_quotes = !in_quotes,
+            '\'' | '"' => in_quotes = !in_quotes,
             ' ' if !in_quotes => {
                 if !current.is_empty() {
                     parts.push(current.clone());
