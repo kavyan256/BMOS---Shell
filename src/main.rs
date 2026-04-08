@@ -52,10 +52,17 @@ fn parse_command(command: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let mut current = String::new();
     let mut in_quotes = false;
+    let mut chars = command.chars().peekable();
 
     // Iterate through each character in the command string
-    for ch in command.chars() {
+    while let Some(ch) = chars.next() {
         match ch {
+            '\\' if !in_quotes => {
+                // Escape character outside quotes - take next char literally
+                if let Some(next_ch) = chars.next() {
+                    current.push(next_ch);
+                }
+            }
             '\'' | '"' => in_quotes = !in_quotes,
             ' ' if !in_quotes => {
                 if !current.is_empty() {
