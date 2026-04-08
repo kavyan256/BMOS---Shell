@@ -1,3 +1,22 @@
+use std::path::PathBuf;                     //represents a filesystem path
+use std::env;                               //provides functions for interacting with the environment, such as accessing environment variables
+use std::fs;                                //provides functions for working with the filesystem, such as reading metadata of files
+use std::os::unix::fs::PermissionsExt;      //provides Unix-specific extensions for working with file permissions, allowing us to check if a file is executable
+
+fn find_executable_in_path(cmd: &str) -> Option<PathBuf> {
+    let paths = env::var("PATH").ok()?;
+    for path_dir in paths.split(':') {
+        let executable = PathBuf::from(path_dir).join(cmd);
+        if let Ok(metadata) = fs::metadata(&executable) {           // Check if the file exists and we can read its metadata
+            // Check if it's a file AND executable
+            if metadata.is_file() && metadata.permissions().mode() & 0o111 != 0 {
+                return Some(executable);
+            }
+        }
+    }
+    None
+}
+
 pub fn exit() -> bool {
     println!("Exiting ...");
     true
@@ -16,7 +35,13 @@ pub fn echo(args: &[&str]) -> bool {
 pub fn type_cmd(arg: &str) -> bool {
     match arg {
         "exit" | "echo" | "type" => println!("{} is a shell builtin", arg),
-        _ => println!("{}: not found", arg),
+        _ => {
+            if let Some(path) = find_executable_in_path(arg) {
+                println!("{} is {}", arg, path.display());
+            } else {
+                println!("{}: not found", arg);
+            }
+        }
     }
     false
 }
