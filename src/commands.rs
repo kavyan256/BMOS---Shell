@@ -2,6 +2,7 @@ use std::path::PathBuf;                     //represents a filesystem path
 use std::env;                               //provides functions for interacting with the environment, such as accessing environment variables
 use std::fs;                                //provides functions for working with the filesystem, such as reading metadata of files
 use std::os::unix::fs::PermissionsExt;      //provides Unix-specific extensions for working with file permissions, allowing us to check if a file is executable
+use std::process::Command;                  //allows us to execute external programs
 
 fn find_executable_in_path(cmd: &str) -> Option<PathBuf> {
     let paths = env::var("PATH").ok()?;
@@ -46,7 +47,23 @@ pub fn type_cmd(arg: &str) -> bool {
     false
 }
 
+pub fn run_external(cmd: &str, args: &[&str]) -> bool {
+    if let Some(path) = find_executable_in_path(cmd) {
+        match Command::new(&path).args(args).status() {
+            Ok(_status) => false,
+            Err(e) => {
+                println!("Error executing {}: {}", cmd, e);
+                false
+            }
+        }
+    } else {
+        println!("{}: command not found", cmd);
+        false
+    }
+}
+
 pub fn type_cmd_err() -> bool {
     println!("type: missing argument");
     false
 }
+

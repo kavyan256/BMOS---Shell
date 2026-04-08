@@ -20,13 +20,27 @@ fn read_command() -> String {
 fn handle_command(command: &str) -> bool {
     let parts: Vec<&str> = command.split_whitespace().collect();
 
-    match parts.as_slice() {
-        [] => false,
-        ["exit"] => commands::exit(),
-        ["echo", ..] => commands::echo(&parts[1..]),
-        ["type", arg] => commands::type_cmd(arg),
-        ["type"] => commands::type_cmd_err(),
-        _ => commands::cmd_not_fnd_err(parts.first().copied().unwrap_or(command))
+    if parts.is_empty() {
+        return false;
+    }
+
+    match parts[0] {
+        "exit" => {
+            if parts.len() == 1 {
+                commands::exit()
+            } else {
+                commands::cmd_not_fnd_err(parts[0])
+            }
+        }
+        "echo" => commands::echo(&parts[1..]),
+        "type" => {
+            if parts.len() > 1 {
+                commands::type_cmd(parts[1])
+            } else {
+                commands::type_cmd_err()
+            }
+        }
+        cmd => commands::run_external(cmd, &parts[1..]),
     }
 }
 
