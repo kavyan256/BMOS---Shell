@@ -75,25 +75,42 @@ pub fn pwd() -> bool {
 }
 
 pub fn cd(args: &[&str]) -> bool {
-    if args.is_empty() {
-        println!("cd: missing argument");
-        return false;
-    }
+    let path_str = if args.is_empty() {
+        // No argument: go to home directory
+        match env::var("HOME") {
+            Ok(home) => home,
+            Err(_) => {
+                println!("cd: HOME not set");
+                return false;
+            }
+        }
+    } else {
+        let arg = args[0];
+        // Handle ~ expansion
+        if arg.starts_with("~") {
+            match env::var("HOME") {
+                Ok(home) => {
+                    if arg == "~" {
+                        home
+                    } else {
+                        format!("{}{}", home, &arg[1..])
+                    }
+                }
+                Err(_) => {
+                    println!("cd: HOME not set");
+                    return false;
+                }
+            }
+        } else {
+            arg.to_string()
+        }
+    };
     
-    let path = PathBuf::from(&args[0]);
-
-    if !path.exists() {
-        println!("cd: {}: No such file or directory", &args[0]);
-        return false;
+    match env::set_current_dir(&path_str) {
+        Ok(_) => false,
+        Err(_) => {
+            println!("cd: {}: No such file or directory", path_str);
+            false
+        }
     }
-
-    if !path.is_dir() {
-        println!("cd: {}: Not a directory", &args[0]);
-        return false;
-    }
-
-    env::set_current_dir(&path)
-        .unwrap_or_else(|_| println!("cd: {}: No such file or directory", &args[0]));
-    
-    false
 }
