@@ -31,3 +31,6 @@ Thumbs.db
 # Cargo.lock is included for binary projects to ensure reproducible builds
 # Uncomment the next line if this is a library crate
 # Cargo.lock
+
+#sample redirected file
+file.txt

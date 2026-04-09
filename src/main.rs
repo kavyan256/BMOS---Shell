@@ -1,4 +1,5 @@
 use std::io::{self, Write};
+use std::fs::File;
 
 mod commands;
 
@@ -26,28 +27,49 @@ fn handle_command(command: &str) -> bool {
 
     let args: Vec<&str> = parts.iter().map(|s| s.as_str()).collect();
 
-    let (output, should_exit) = match args[0] {
+    // Check for output redirection (> or 1>)
+    let mut redirect_path = None;
+    let mut filtered_args = args.clone();
+
+    for i in (0..filtered_args.len()).rev() {
+        if filtered_args[i] == ">" || filtered_args[i] == "1>" {
+            if i + 1 < filtered_args.len() {
+                redirect_path = Some(filtered_args[i + 1].to_string());
+                filtered_args.truncate(i); // Remove > and path from args
+            }
+            break;
+        }
+    }
+
+    let (output, should_exit) = match filtered_args[0] {
         "exit" => {
-            if args.len() == 1 {
+            if filtered_args.len() == 1 {
                 commands::exit()
             } else {
-                commands::cmd_not_fnd_err(args[0])
+                commands::cmd_not_fnd_err(filtered_args[0])
             }
         }
-        "echo" => commands::echo(&args[1..]),
+        "echo" => commands::echo(&filtered_args[1..]),
         "type" => {
-            if args.len() > 1 {
-                commands::type_cmd(args[1])
+            if filtered_args.len() > 1 {
+                commands::type_cmd(filtered_args[1])
             } else {
                 commands::type_cmd_err()
             }
         }
         "pwd" => commands::pwd(),
-        "cd" => commands::cd(&args[1..]),
-        cmd => commands::run_external(cmd, &args[1..]),
+        "cd" => commands::cd(&filtered_args[1..]),
+        cmd => commands::run_external(cmd, &filtered_args[1..]),
     };
 
-    if !output.is_empty() {
+    // Handle output redirection or print to stdout
+    if let Some(path) = redirect_path {
+        if let Ok(mut file) = File::create(&path) {
+            let _ = file.write_all(output.as_bytes());
+        } else {
+            eprintln!("Error: cannot write to {}", path);
+        }
+    } else if !output.is_empty() {
         print!("{}", output);
     }
 
