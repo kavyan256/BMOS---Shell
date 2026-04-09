@@ -31,6 +31,7 @@ fn handle_command(command: &str) -> bool {
     let mut stdout_redirect = None;
     let mut stderr_redirect = None;
     let mut stdout_append = false;
+    let mut stderr_append = false;
     let mut filtered_args = args.clone();
 
     for i in (0..filtered_args.len()).rev() {
@@ -52,9 +53,17 @@ fn handle_command(command: &str) -> bool {
     }
 
     for i in (0..filtered_args.len()).rev() {
-        if filtered_args[i] == "2>" {
+        if filtered_args[i] == "2>>" {
             if i + 1 < filtered_args.len() {
                 stderr_redirect = Some(filtered_args[i + 1].to_string());
+                stderr_append = true;
+                filtered_args.truncate(i);
+            }
+            break;
+        } else if filtered_args[i] == "2>" {
+            if i + 1 < filtered_args.len() {
+                stderr_redirect = Some(filtered_args[i + 1].to_string());
+                stderr_append = false;
                 filtered_args.truncate(i);
             }
             break;
@@ -106,7 +115,18 @@ fn handle_command(command: &str) -> bool {
 
     // Handle stderr redirection
     if let Some(path) = stderr_redirect {
-        if let Ok(mut file) = File::create(&path) {
+        let result = if stderr_append {
+            // Append mode: open existing file or create if it doesn't exist
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)
+        } else {
+            // Truncate mode: create or overwrite
+            File::create(&path)
+        };
+
+        if let Ok(mut file) = result {
             let _ = file.write_all(errors.as_bytes());
         } else {
             eprintln!("Error: cannot write to {}", path);
