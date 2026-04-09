@@ -20,68 +20,63 @@ fn find_executable_in_path(cmd: &str) -> Option<PathBuf> {
     None
 }
 
-pub fn exit() -> bool {
-    println!("Exiting ...");
-    true
+pub fn exit() -> (String, bool) {
+    ("Exiting ...\n".to_string(), true)
 }
 
-pub fn cmd_not_fnd_err(command: &str) -> bool {
-    println!("{}: command not found", command);
-    false
+pub fn cmd_not_fnd_err(command: &str) -> (String, bool) {
+    (format!("{}: command not found\n", command), false)
 }
 
-pub fn echo(args: &[&str]) -> bool {
-    println!("{}", args.join(" "));
-    false
+pub fn echo(args: &[&str]) -> (String, bool) {
+    (format!("{}\n", args.join(" ")), false)
 }
 
-pub fn type_cmd(arg: &str) -> bool {
-    if BUILTINS.contains(&arg) {
-        println!("{} is a shell builtin", arg);
+pub fn type_cmd(arg: &str) -> (String, bool) {
+    let output = if BUILTINS.contains(&arg) {
+        format!("{} is a shell builtin\n", arg)
     } else if let Some(path) = find_executable_in_path(arg) {
-        println!("{} is {}", arg, path.display());
+        format!("{} is {}\n", arg, path.display())
     } else {
-        println!("{}: not found", arg);
-    }
-    false
+        format!("{}: not found\n", arg)
+    };
+    (output, false)
 }
 
-pub fn run_external(cmd: &str, args: &[&str]) -> bool {
+pub fn run_external(cmd: &str, args: &[&str]) -> (String, bool) {
     if let Some(path) = find_executable_in_path(cmd) {
-        match Command::new(&path).args(args).status() {
-            Ok(_status) => false,
+        match Command::new(&path).args(args).output() {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                (stdout, false)
+            }
             Err(e) => {
-                println!("Error executing {}: {}", cmd, e);
-                false
+                (format!("Error executing {}: {}\n", cmd, e), false)
             }
         }
     } else {
-        println!("{}: command not found", cmd);
-        false
+        (format!("{}: command not found\n", cmd), false)
     }
 }
 
-pub fn type_cmd_err() -> bool {
-    println!("type: missing argument");
-    false
+pub fn type_cmd_err() -> (String, bool) {
+    ("type: missing argument\n".to_string(), false)
 }
 
-pub fn pwd() -> bool {
+pub fn pwd() -> (String, bool) {
     match env::current_dir() {
-        Ok(path) => println!("{}", path.display()),
-        Err(e) => println!("pwd: {}", e),
+        Ok(path) => (format!("{}\n", path.display()), false),
+        Err(e) => (format!("pwd: {}\n", e), false),
     }
-    false
 }
 
-pub fn cd(args: &[&str]) -> bool {
+pub fn cd(args: &[&str]) -> (String, bool) {
     let path_str = if args.is_empty() {
         // No argument: go to home directory
         match env::var("HOME") {
             Ok(home) => home,
             Err(_) => {
-                println!("cd: HOME not set");
-                return false;
+                return ("cd: HOME not set\n".to_string(), false);
             }
         }
     } else {
@@ -97,8 +92,7 @@ pub fn cd(args: &[&str]) -> bool {
                     }
                 }
                 Err(_) => {
-                    println!("cd: HOME not set");
-                    return false;
+                    return ("cd: HOME not set\n".to_string(), false);
                 }
             }
         } else {
@@ -107,10 +101,9 @@ pub fn cd(args: &[&str]) -> bool {
     };
     
     match env::set_current_dir(&path_str) {
-        Ok(_) => false,
-        Err(_) => {
-            println!("cd: {}: No such file or directory", path_str);
-            false
+        Ok(_) => ("".to_string(), false),
+        Err(e) => {
+            (format!("cd: {}: {}\n", path_str, e), false)
         }
     }
 }

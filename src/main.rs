@@ -26,7 +26,7 @@ fn handle_command(command: &str) -> bool {
 
     let args: Vec<&str> = parts.iter().map(|s| s.as_str()).collect();
 
-    match args[0] {
+    let (output, should_exit) = match args[0] {
         "exit" => {
             if args.len() == 1 {
                 commands::exit()
@@ -45,7 +45,13 @@ fn handle_command(command: &str) -> bool {
         "pwd" => commands::pwd(),
         "cd" => commands::cd(&args[1..]),
         cmd => commands::run_external(cmd, &args[1..]),
+    };
+
+    if !output.is_empty() {
+        print!("{}", output);
     }
+
+    should_exit
 }
 
 fn parse_command(command: &str) -> Vec<String> {
