@@ -48,6 +48,13 @@ pub fn run_external(cmd: &str, args: &[&str]) -> (String, bool) {
         match Command::new(&path).args(args).output() {
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                
+                // Print stderr to terminal immediately (not redirected)
+                if !stderr.is_empty() {
+                    eprint!("{}", stderr);
+                }
+                
                 (stdout, false)
             }
             Err(e) => {
