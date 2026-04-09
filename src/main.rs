@@ -27,21 +27,32 @@ fn handle_command(command: &str) -> bool {
 
     let args: Vec<&str> = parts.iter().map(|s| s.as_str()).collect();
 
-    // Check for output redirection (> or 1>)
-    let mut redirect_path = None;
+    // Check for output redirection (> or 1> for stdout, 2> for stderr)
+    let mut stdout_redirect = None;
+    let mut stderr_redirect = None;
     let mut filtered_args = args.clone();
 
     for i in (0..filtered_args.len()).rev() {
         if filtered_args[i] == ">" || filtered_args[i] == "1>" {
             if i + 1 < filtered_args.len() {
-                redirect_path = Some(filtered_args[i + 1].to_string());
-                filtered_args.truncate(i); // Remove > and path from args
+                stdout_redirect = Some(filtered_args[i + 1].to_string());
+                filtered_args.truncate(i);
             }
             break;
         }
     }
 
-    let (output, should_exit) = match filtered_args[0] {
+    for i in (0..filtered_args.len()).rev() {
+        if filtered_args[i] == "2>" {
+            if i + 1 < filtered_args.len() {
+                stderr_redirect = Some(filtered_args[i + 1].to_string());
+                filtered_args.truncate(i);
+            }
+            break;
+        }
+    }
+
+    let (output, errors, should_exit) = match filtered_args[0] {
         "exit" => {
             if filtered_args.len() == 1 {
                 commands::exit()
@@ -62,8 +73,8 @@ fn handle_command(command: &str) -> bool {
         cmd => commands::run_external(cmd, &filtered_args[1..]),
     };
 
-    // Handle output redirection or print to stdout
-    if let Some(path) = redirect_path {
+    // Handle stdout redirection
+    if let Some(path) = stdout_redirect {
         if let Ok(mut file) = File::create(&path) {
             let _ = file.write_all(output.as_bytes());
         } else {
@@ -71,6 +82,17 @@ fn handle_command(command: &str) -> bool {
         }
     } else if !output.is_empty() {
         print!("{}", output);
+    }
+
+    // Handle stderr redirection
+    if let Some(path) = stderr_redirect {
+        if let Ok(mut file) = File::create(&path) {
+            let _ = file.write_all(errors.as_bytes());
+        } else {
+            eprintln!("Error: cannot write to {}", path);
+        }
+    } else if !errors.is_empty() {
+        eprint!("{}", errors);
     }
 
     should_exit

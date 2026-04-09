@@ -20,70 +20,64 @@ fn find_executable_in_path(cmd: &str) -> Option<PathBuf> {
     None
 }
 
-pub fn exit() -> (String, bool) {
-    ("Exiting ...\n".to_string(), true)
+pub fn exit() -> (String, String, bool) {
+    ("Exiting ...\n".to_string(), String::new(), true)
 }
 
-pub fn cmd_not_fnd_err(command: &str) -> (String, bool) {
-    (format!("{}: command not found\n", command), false)
+pub fn cmd_not_fnd_err(command: &str) -> (String, String, bool) {
+    (String::new(), format!("{}: command not found\n", command), false)
 }
 
-pub fn echo(args: &[&str]) -> (String, bool) {
-    (format!("{}\n", args.join(" ")), false)
+pub fn echo(args: &[&str]) -> (String, String, bool) {
+    (format!("{}\n", args.join(" ")), String::new(), false)
 }
 
-pub fn type_cmd(arg: &str) -> (String, bool) {
-    let output = if BUILTINS.contains(&arg) {
-        format!("{} is a shell builtin\n", arg)
+pub fn type_cmd(arg: &str) -> (String, String, bool) {
+    if BUILTINS.contains(&arg) {
+        (format!("{} is a shell builtin\n", arg), String::new(), false)
     } else if let Some(path) = find_executable_in_path(arg) {
-        format!("{} is {}\n", arg, path.display())
+        (format!("{} is {}\n", arg, path.display()), String::new(), false)
     } else {
-        format!("{}: not found\n", arg)
-    };
-    (output, false)
+        (String::new(), format!("{}: not found\n", arg), false)
+    }
 }
 
-pub fn run_external(cmd: &str, args: &[&str]) -> (String, bool) {
+pub fn run_external(cmd: &str, args: &[&str]) -> (String, String, bool) {
     if let Some(path) = find_executable_in_path(cmd) {
         match Command::new(&path).args(args).output() {
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout).to_string();
                 let stderr = String::from_utf8_lossy(&output.stderr).to_string();
                 
-                // Print stderr to terminal immediately (not redirected)
-                if !stderr.is_empty() {
-                    eprint!("{}", stderr);
-                }
-                
-                (stdout, false)
+                (stdout, stderr, false)
             }
             Err(e) => {
-                (format!("Error executing {}: {}\n", cmd, e), false)
+                (String::new(), format!("Error executing {}: {}\n", cmd, e), false)
             }
         }
     } else {
-        (format!("{}: command not found\n", cmd), false)
+        (String::new(), format!("{}: command not found\n", cmd), false)
     }
 }
 
-pub fn type_cmd_err() -> (String, bool) {
-    ("type: missing argument\n".to_string(), false)
+pub fn type_cmd_err() -> (String, String, bool) {
+    (String::new(), "type: missing argument\n".to_string(), false)
 }
 
-pub fn pwd() -> (String, bool) {
+pub fn pwd() -> (String, String, bool) {
     match env::current_dir() {
-        Ok(path) => (format!("{}\n", path.display()), false),
-        Err(e) => (format!("pwd: {}\n", e), false),
+        Ok(path) => (format!("{}\n", path.display()), String::new(), false),
+        Err(e) => (String::new(), format!("pwd: {}\n", e), false),
     }
 }
 
-pub fn cd(args: &[&str]) -> (String, bool) {
+pub fn cd(args: &[&str]) -> (String, String, bool) {
     let path_str = if args.is_empty() {
         // No argument: go to home directory
         match env::var("HOME") {
             Ok(home) => home,
             Err(_) => {
-                return ("cd: HOME not set\n".to_string(), false);
+                return (String::new(), "cd: HOME not set\n".to_string(), false);
             }
         }
     } else {
@@ -99,7 +93,7 @@ pub fn cd(args: &[&str]) -> (String, bool) {
                     }
                 }
                 Err(_) => {
-                    return ("cd: HOME not set\n".to_string(), false);
+                    return (String::new(), "cd: HOME not set\n".to_string(), false);
                 }
             }
         } else {
@@ -108,9 +102,9 @@ pub fn cd(args: &[&str]) -> (String, bool) {
     };
     
     match env::set_current_dir(&path_str) {
-        Ok(_) => ("".to_string(), false),
+        Ok(_) => (String::new(), String::new(), false),
         Err(e) => {
-            (format!("cd: {}: {}\n", path_str, e), false)
+            (String::new(), format!("cd: {}: {}\n", path_str, e), false)
         }
     }
 }
