@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# Test script for BMOS shell
-# Run: cargo run < test_shell.sh
-
-# Test echo command
 echo "Testing echo command:"
 echo Hello World
 echo "Multiple" "arguments" "test"

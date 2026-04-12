@@ -9,30 +9,28 @@ mod path_finder;
 mod runner;
 mod shell;
 mod check_builtin;
+mod completion;
 
 use std::ops::ControlFlow;
-use std::io::{self, Write};
+//use std::io::{self, Write};
+use rustyline::Editor;
+use crate::completion::ShellHelper;
 
-fn main() {
+fn main() -> rustyline::Result<()> {
+    let helper = ShellHelper::new();
+    let mut rl = Editor::new()?;
+    rl.set_helper(Some(helper));
+
     loop {
+        let line = rl.readline("$ ")?;
 
-        //print the shell prompt
-        print!("$ ");
-        io::stdout().flush().unwrap();
-
-        //take input from user
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
-
-        //parse the input into an order
         let Some(order) = shell::input(line) else {
             continue;
         };
 
-        //execute the order
         match order.execute() {
             ControlFlow::Continue(_) => continue,
-            ControlFlow::Break(_) => break,
+            ControlFlow::Break(_) => break Ok(()),
         }
     }
 }
