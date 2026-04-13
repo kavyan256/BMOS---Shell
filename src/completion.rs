@@ -19,11 +19,15 @@ impl Completer for ShellHelper {
 
     // Called on Tab: given the current line and cursor position, returns
     // (start_pos, candidates) where start_pos is where the replacement begins.
+    // - Single match  → completes immediately
+    // - Multiple matches → prints all options and keeps the current word so the
+    //   user can keep typing to narrow down (rustyline handles this when
+    //   CompletionType::List is set in main.rs)
     fn complete(
-    &self,
-    line: &str,
-    pos: usize,
-    _ctx: &rustyline::Context,
+        &self,
+        line: &str,
+        pos: usize,
+        _ctx: &rustyline::Context,
     ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
         let word = &line[..pos];
         if word.contains(' ') {
@@ -52,29 +56,45 @@ impl Completer for ShellHelper {
         exe_matches.sort();
         matches.extend(exe_matches);
 
-        // If no matches, ring the bell.
         if matches.is_empty() {
             print!("{}", '\x07');
-            Ok((0, Vec::new()))
-        } else {
-            Ok((0, matches))
+            return Ok((0, Vec::new()));
         }
+
+        // Single match: complete it immediately.
+        if matches.len() == 1 {
+            return Ok((0, matches));
+        }
+
+        // Multiple matches: find the longest common prefix so the line is
+        // advanced as far as unambiguous, then return all candidates so
+        // rustyline prints the list below the prompt.
+        let lcp = longest_common_prefix(&matches);
+        if lcp.trim_end().len() > word.len() {
+            // Can advance further without ambiguity — fill in the common part.
+            // Return all matches too so rustyline shows the list if the user
+            // tabs again at the new (longer) prefix.
+            let mut advanced = vec![lcp];
+            advanced.extend(matches);
+            return Ok((0, advanced));
+        }
+
+        // Already at the ambiguous boundary — just show the list.
+        Ok((0, matches))
     }
 }
 
 impl Hinter for ShellHelper {
     type Hint = String;
 
-    // Show a greyed-out hint for the first matching builtin as the user types.
-    // This gives beginners a preview of what Tab will complete to.
     fn hint(&self, line: &str, pos: usize, _ctx: &rustyline::Context) -> Option<Self::Hint> {
         if line.is_empty() || line.contains(' ') {
             return None;
         }
 
         let word = &line[..pos];
-        
-        // First try to find a matching builtin hint
+
+        // Builtins take priority for hints.
         if let Some(&cmd) = BuiltinCommand::variants()
             .iter()
             .find(|&&cmd| cmd.starts_with(word) && cmd != word)
@@ -83,17 +103,14 @@ impl Hinter for ShellHelper {
             return Some(format!("\x1b[2m{}\x1b[0m", suffix));
         }
 
-        // If no builtin matches, try to find an executable hint
+        // Fall back to first matching PATH executable.
         PathFinder::find_executables_with_prefix(word)
             .into_iter()
             .next()
-            .and_then(|exe| {
-                if exe.len() > word.len() {
-                    let suffix = exe[word.len()..].to_string();
-                    Some(format!("\x1b[2m{}\x1b[0m", suffix))
-                } else {
-                    None
-                }
+            .filter(|exe| exe.len() > word.len())
+            .map(|exe| {
+                let suffix = exe[word.len()..].to_string();
+                format!("\x1b[2m{}\x1b[0m", suffix)
             })
     }
 }
@@ -103,3 +120,25 @@ impl Highlighter for ShellHelper {}
 impl Validator for ShellHelper {}
 
 impl Helper for ShellHelper {}
+
+// Returns the longest string that is a common prefix of all candidates.
+// Candidates carry a trailing space (e.g. "git ") — we compare including it
+// so a sole exact match like ["git "] still returns "git " with the space.
+fn longest_common_prefix(candidates: &[String]) -> String {
+    let first = match candidates.first() {
+        Some(s) => s,
+        None => return String::new(),
+    };
+
+    let mut lcp_len = first.len();
+    for candidate in &candidates[1..] {
+        lcp_len = candidate
+            .chars()
+            .zip(first.chars())
+            .take_while(|(a, b)| a == b)
+            .count()
+            .min(lcp_len);
+    }
+
+    first[..lcp_len].to_string()
+}
