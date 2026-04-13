@@ -73,12 +73,27 @@ impl Hinter for ShellHelper {
         }
 
         let word = &line[..pos];
-        BuiltinCommand::variants()
+        
+        // First try to find a matching builtin hint
+        if let Some(&cmd) = BuiltinCommand::variants()
             .iter()
             .find(|&&cmd| cmd.starts_with(word) && cmd != word)
-            .map(|&cmd| { //shows only missing suffix
-                let suffix = cmd[word.len()..].to_string();
-                format!("\x1b[2m{}\x1b[0m", suffix)
+        {
+            let suffix = cmd[word.len()..].to_string();
+            return Some(format!("\x1b[2m{}\x1b[0m", suffix));
+        }
+
+        // If no builtin matches, try to find an executable hint
+        PathFinder::find_executables_with_prefix(word)
+            .into_iter()
+            .next()
+            .and_then(|exe| {
+                if exe.len() > word.len() {
+                    let suffix = exe[word.len()..].to_string();
+                    Some(format!("\x1b[2m{}\x1b[0m", suffix))
+                } else {
+                    None
+                }
             })
     }
 }
