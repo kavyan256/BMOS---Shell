@@ -4,6 +4,7 @@ use rustyline::hint::Hinter;                        //logic for providing hints 
 use rustyline::validate::Validator;                 //logic for validating the input command before execution
 use rustyline::Helper;                              //trait that combines Completer, Highlighter, etc into a single helper struct for the REPL
 use crate::builtin_command::BuiltinCommand;         //builtin commands enum
+use crate::path_finder::PathFinder;                 //logic for finding the full path of an executable command by searching through the directories listed in the PATH environment variable
 
 pub struct ShellHelper;
 
@@ -19,35 +20,43 @@ impl Completer for ShellHelper {
     // Called on Tab: given the current line and cursor position, returns
     // (start_pos, candidates) where start_pos is where the replacement begins.
     fn complete(
-        &self,
-        line: &str,
-        pos: usize,
-        _ctx: &rustyline::Context,
+    &self,
+    line: &str,
+    pos: usize,
+    _ctx: &rustyline::Context,
     ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
-        // Only complete the first word (the command itself).
-        // If the user has already typed a space, there's an argument — skip for now.
         let word = &line[..pos];
         if word.contains(' ') {
             return Ok((pos, Vec::new()));
         }
 
-        // Collect every builtin that starts with what the user has typed so far.
-        let matches: Vec<String> = BuiltinCommand::variants()
+        // Builtins first — they take priority over PATH executables.
+        let mut matches: Vec<String> = BuiltinCommand::variants()
             .iter()
             .filter(|&&cmd| cmd.starts_with(word))
-            .map(|&cmd| {
-                // Append a space so the cursor lands after the completed command,
-                // ready for the user to type arguments.
-                format!("{} ", cmd)
-            })
+            .map(|&cmd| format!("{} ", cmd))
             .collect();
 
+        // Extend with PATH executables, skipping any already covered by a builtin.
+        let builtin_set: std::collections::HashSet<&str> = BuiltinCommand::variants()
+            .iter()
+            .copied()
+            .collect();
+
+        let mut exe_matches = PathFinder::find_executables_with_prefix(word)
+            .into_iter()
+            .filter(|name| !builtin_set.contains(name.as_str()))
+            .map(|name| format!("{} ", name))
+            .collect::<Vec<_>>();
+
+        exe_matches.sort();
+        matches.extend(exe_matches);
+
+        // If no matches, ring the bell.
         if matches.is_empty() {
-            // Ring the bell to signal nothing matched.
             print!("{}", '\x07');
             Ok((0, Vec::new()))
         } else {
-            // Replace from position 0 so the whole partial word is swapped out.
             Ok((0, matches))
         }
     }

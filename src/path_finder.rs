@@ -36,6 +36,25 @@ impl PathFinder {
             .into_iter()
             .find(|candidate| has_exec_permissions(candidate).unwrap_or(false))
     }
+
+    pub fn find_executables_with_prefix(prefix: &str) -> Vec<String> {
+        let path_string = std::env::var_os("PATH").unwrap_or_default();
+        let mut matches = Vec::new();
+
+        for dir in env::split_paths(&path_string) {
+            let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+            for entry in entries.flatten() {
+                let name = entry.file_name();
+                let name = name.to_string_lossy();
+                if name.starts_with(prefix) {
+                    if has_exec_permissions(&entry.path()).unwrap_or(false) {
+                        matches.push(name.into_owned());
+                    }
+                }
+            }
+        }
+        matches
+    }
 }
 
 fn has_exec_permissions(path: &Path) -> Result<bool, io::Error> {
