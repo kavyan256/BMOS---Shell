@@ -66,20 +66,17 @@ impl Completer for ShellHelper {
             return Ok((0, matches));
         }
 
-        // Multiple matches: find the longest common prefix so the line is
-        // advanced as far as unambiguous, then return all candidates so
-        // rustyline prints the list below the prompt.
+        // Multiple matches: compute the longest common prefix.
         let lcp = longest_common_prefix(&matches);
-        if lcp.trim_end().len() > word.len() {
-            // Can advance further without ambiguity — fill in the common part.
-            // Return all matches too so rustyline shows the list if the user
-            // tabs again at the new (longer) prefix.
-            let mut advanced = vec![lcp];
-            advanced.extend(matches);
-            return Ok((0, advanced));
+        let lcp_name_len = lcp.trim_end().len();
+
+        if lcp_name_len > word.len() {
+            // First Tab: advance the line to the LCP and stop.
+            // The user can keep typing or hit Tab again to see the full list.
+            return Ok((0, vec![lcp]));
         }
 
-        // Already at the ambiguous boundary — just show the list.
+        // Second Tab (already at LCP boundary): show the full list.
         Ok((0, matches))
     }
 }
