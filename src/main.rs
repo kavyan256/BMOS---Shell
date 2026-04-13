@@ -10,6 +10,8 @@ mod runner;
 mod shell;
 mod check_builtin;
 mod completion;
+mod command_completer;
+mod path_completer;
 
 use std::ops::ControlFlow;
 use rustyline::Editor;
