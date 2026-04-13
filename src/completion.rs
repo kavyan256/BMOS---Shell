@@ -67,7 +67,10 @@ impl Hinter for ShellHelper {
         BuiltinCommand::variants()
             .iter()
             .find(|&&cmd| cmd.starts_with(word) && cmd != word)
-            .map(|&cmd| cmd[word.len()..].to_string()) // show only the missing suffix
+            .map(|&cmd| { //shows only missing suffix
+                let suffix = cmd[word.len()..].to_string();
+                format!("\x1b[2m{}\x1b[0m", suffix)
+            })
     }
 }
 
