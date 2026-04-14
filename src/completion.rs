@@ -6,38 +6,48 @@ use rustyline::Helper;                              //trait that combines Comple
 use crate::builtin_command::BuiltinCommand;         //for hints
 use crate::path_finder::PathFinder;                 //for hints
 use crate::command_completer;                       //command name completion (builtins + PATH)
-use crate::path_completer;                          //filename/path completion (to be implemented)
+use crate::path_completer;                          //filename/path completion
+use std::cell::Cell;                                //interior mutability for tab press tracking without &mut self
+use std::io::Write;
 
-pub struct ShellHelper;
+pub struct ShellHelper {
+    last_was_tab: Cell<bool>,   //tracks whether the previous keypress was also TAB
+}
 
+//implements constructor for ShellHelper struct
 impl ShellHelper {
     pub fn new() -> Self {
-        ShellHelper
+        ShellHelper {
+            last_was_tab: Cell::new(false),
+        }
     }
 }
 
+//implement the Completer trait for ShellHelper
 impl Completer for ShellHelper {
-    type Candidate = String;
+
+    //specify Candidate type as String
+    type Candidate = String; 
 
     fn complete(
         &self,
         line: &str,
         pos: usize,
         _ctx: &rustyline::Context,
-    ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
-        let before_cursor = &line[..pos];
-        let tokens: Vec<&str> = before_cursor.split_whitespace().collect();
-        let is_typing_command = tokens.len() <= 1 && !before_cursor.ends_with(' ');
+    ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {         //usize is the index where completion starts
+        let before_cursor = &line[..pos];                     //slices from start to cursor
+        let tokens: Vec<&str> = before_cursor.split_whitespace().collect();     //splits before_cursor into tokens
+        let is_typing_command = tokens.len() <= 1 && !before_cursor.ends_with(' '); 
 
         // Decide which completer to use based on cursor position.
-        let (start, candidates) = if is_typing_command {
+        let (start, mut candidates) = if is_typing_command {
             // Position 0: completing the command name.
             let word = tokens.first().copied().unwrap_or("");
             (0, command_completer::complete_commands(word))
         } else {
             // Position >= 1: completing a filename/path argument.
             let word = if before_cursor.ends_with(' ') {
-                ""                                                   //starting a new argument
+                ""                                          //starting a new argument
             } else {
                 tokens.last().copied().unwrap_or("")        //mid-word on current argument
             };
@@ -45,24 +55,59 @@ impl Completer for ShellHelper {
             (start, path_completer::complete_paths(word))
         };
 
+        // No matches — ring bell, leave line unchanged.
         if candidates.is_empty() {
             print!("{}", '\x07');
+            self.last_was_tab.set(false);
             return Ok((start, Vec::new()));
         }
 
+        // Single match — complete immediately.
         if candidates.len() == 1 {
+            self.last_was_tab.set(false);
             return Ok((start, candidates));
         }
 
-        // Multiple matches: advance to longest common prefix on first Tab,
-        // show full list on second Tab.
+        // Multiple matches — different behaviour for commands vs paths.
+        self.last_was_tab.set(true);
+
+        if is_typing_command {
+            // Command completion: advance to LCP on first Tab, list on second.
+            let lcp = longest_common_prefix(&candidates);
+            let typed_len = pos - start;                    //len of what's currently typed
+            if lcp.trim_end().len() > typed_len {
+                // LCP is longer than what's typed — advance to it silently.
+                self.last_was_tab.set(false);
+                return Ok((start, vec![lcp]));
+            }
+            // Already at LCP boundary — show full list.
+            return Ok((start, candidates));
+        }
+
+        // Path completion: advance to LCP on first Tab, list on second Tab.
         let lcp = longest_common_prefix(&candidates);
         let typed_len = pos - start;
         if lcp.trim_end().len() > typed_len {
+            // LCP is longer than what's typed — advance to it silently.
+            self.last_was_tab.set(false);
             return Ok((start, vec![lcp]));
         }
 
-        Ok((start, candidates))
+        // Already at LCP boundary — list on this Tab.
+        // Second Tab: print all matches on a new line separated by two spaces.
+        // Directories keep their trailing "/", files have trailing space stripped for display.
+        candidates.sort();
+        let display: Vec<String> = candidates
+            .iter()
+            .map(|c| c.trim_end_matches(' ').to_string())
+            .collect();
+        print!("\n{}\n", display.join("  "));
+        std::io::stdout().flush().ok();
+
+        // Return the current word unchanged so rustyline redraws the prompt
+        // with the input intact and the cursor in the right place.
+        let current_word = &line[start..pos];
+        Ok((start, vec![current_word.to_string()]))
     }
 }
 
