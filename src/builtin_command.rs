@@ -5,13 +5,14 @@ pub enum BuiltinCommand {
     Exit,
     TypeCmd,
     Pwd,
+    Jobs,
 }
 
 impl BuiltinCommand {
     // Single source of truth for all builtins.
     // Add a new variant above + one entry here — completion picks it up automatically.
     pub fn variants() -> &'static [&'static str] {
-        &["cd", "echo", "exit", "type", "pwd"]
+        &["cd", "echo", "exit", "type", "pwd", "jobs"]
     }
 }
 
@@ -25,6 +26,7 @@ impl TryFrom<String> for BuiltinCommand {
             "exit" => Ok(BuiltinCommand::Exit),
             "type" => Ok(BuiltinCommand::TypeCmd),
             "pwd"  => Ok(BuiltinCommand::Pwd),
+            "jobs" => Ok(BuiltinCommand::Jobs),
             _      => Err("Not a builtin command".to_string()),
         }
     }
@@ -38,6 +40,7 @@ impl std::fmt::Display for BuiltinCommand {
             BuiltinCommand::Exit    => write!(f, "exit"),
             BuiltinCommand::TypeCmd => write!(f, "type"),
             BuiltinCommand::Pwd     => write!(f, "pwd"),
+            BuiltinCommand::Jobs    => write!(f, "jobs"),
         }
     }
 }

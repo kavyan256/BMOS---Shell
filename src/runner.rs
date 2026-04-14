@@ -71,16 +71,24 @@ pub fn cd(args: &[String]) -> Result<ControlFlow<()>, NotFound> {
     Ok(ControlFlow::Continue(()))
 }
 
-pub fn executable(
-    path: &Path,
-    args: &Vec<String>,
-    mut output_config: OutputConfig,
-) -> ControlFlow<()> {
-    let command_out = std::process::Command::new(path.file_name().unwrap())
-        .args(args)
-        .output()
-        .unwrap();
-    output_config.stdout.write_all(&command_out.stdout).unwrap();
-    output_config.stderr.write_all(&command_out.stderr).unwrap();
+pub fn executable(path: &Path,args: &Vec<String>,mut output_config: OutputConfig,is_background: bool,) -> ControlFlow<()> {
+    if is_background {
+        std::process::Command::new(path.file_name().unwrap())
+            .args(args)
+            .spawn()    //spawns child process and doesnt wait for finish
+            .unwrap();
+    } else {
+        let command_out = std::process::Command::new(path.file_name().unwrap())
+            .args(args)
+            .output()
+            .unwrap();
+        output_config.stdout.write_all(&command_out.stdout).unwrap();
+        output_config.stderr.write_all(&command_out.stderr).unwrap();
+    }
+    ControlFlow::Continue(())
+}
+
+pub fn jobs() -> ControlFlow<()> {
+    //correct implementation for now
     ControlFlow::Continue(())
 }

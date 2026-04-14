@@ -8,8 +8,11 @@ use crate::output_config::OutputConfig;
 //command and its arguments, and checks for any special symbols that indicate output redirection. If such symbols 
 //are found, it configures the OutputConfig accordingly. 
 
-pub fn parse_input(input: String) -> Result<(Command, Vec<String>, OutputConfig), NotFound> {
-    let parsed_input = ArgumentParser::new(input).parse(); 
+pub fn parse_input(input: String) -> Result<(Command, Vec<String>, OutputConfig, bool), NotFound> {
+    let mut parser = ArgumentParser::new(input);
+    let parsed_input = parser.parse();
+    let is_background = parser.is_background_process;
+
     let (command_array, args_array) = parsed_input.split_at(1);
     let command_string = command_array[0].clone();
 
@@ -29,7 +32,7 @@ pub fn parse_input(input: String) -> Result<(Command, Vec<String>, OutputConfig)
         Ok(OutputConfig::default())                             //uses the default output config
     }?;
 
-    Ok((command, args.to_vec(), output_config))                 //returns the parsed cmd, args and output config
+    Ok((command, args.to_vec(), output_config, is_background))                 //returns the parsed cmd, args and output config
 }
 
 //function to find special symbol in the args for output redirection and return its index and the symbol itself

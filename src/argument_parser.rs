@@ -17,6 +17,8 @@ pub struct ArgumentParser {
     mode: State,                //current parsing state
     current_word: String,        //accumulates characters for current argument
     result: Vec<String>,        //final list of parsed arguments
+
+    pub is_background_process: bool, //flag to indicate if command is background process
 }
 
 impl ArgumentParser {
@@ -27,7 +29,9 @@ impl ArgumentParser {
             input,
             mode: State::Normal,
             current_word: String::new(),
-            result: Vec::new()
+            result: Vec::new(),
+
+            is_background_process: false,
         }
     }
 
@@ -103,6 +107,14 @@ impl ArgumentParser {
         if !self.current_word.is_empty() {                   
             self.result.push(self.current_word.clone());
         }
+
+        //check for background process
+        if self.result.last().map(|s| s.as_str()) == Some("&") {
+            self.result.pop();
+            self.is_background_process = true;
+        }
+
+        //return
         self.result.clone()
     }
 }

@@ -16,7 +16,7 @@ pub fn input(line: String) -> Option<Order> {
 
     //check if the input is valid and return an order
     match parsed_input {    
-        Ok((command, args, output_conf)) => Some(Order::new(command, args, output_conf)),
+        Ok((command, args, output_conf, is_background)) => Some(Order::new(command, args, output_conf, is_background)),
         Err(err) => {
             eprintln!("{}", err);
             None

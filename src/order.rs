@@ -11,16 +11,18 @@ pub struct Order {
     command: Command,
     args: Vec<String>,
     output_config: OutputConfig,
+    is_background: bool,
 }
 
 impl Order {
 
     //constructor
-    pub fn new(command: Command, args: Vec<String>, output_config: OutputConfig) -> Self {
+    pub fn new(command: Command, args: Vec<String>, output_config: OutputConfig, is_background: bool) -> Self {
         Order {
             command,
             args,
             output_config,
+            is_background,  
         }
     }
 
@@ -30,6 +32,7 @@ impl Order {
             command,
             args,
             output_config,
+            is_background,
         } = self;
 
         //matches for the cmd and executes respective runner
@@ -39,7 +42,8 @@ impl Order {
             Command::Builtin(BuiltinCommand::TypeCmd) => Ok(runner::r#type(&args, output_config)),
             Command::Builtin(BuiltinCommand::Pwd) => Ok(runner::pwd(output_config)),
             Command::Builtin(BuiltinCommand::Cd) => runner::cd(&args),
-            Command::Executable(path) => Ok(runner::executable(path, &args, output_config)),
+            Command::Builtin(BuiltinCommand::Jobs) => Ok(runner::jobs()),
+            Command::Executable(path) => Ok(runner::executable(path, &args, output_config, is_background)),
         };
 
         //checks result and handles errors by printing and REPL
