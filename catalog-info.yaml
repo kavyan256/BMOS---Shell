@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: bmos-shell
+  description: a custom shell built in rust
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - rust
+    - none
+spec:
+  type: library
+  lifecycle: experimental
+  owner: user:kavyan256
