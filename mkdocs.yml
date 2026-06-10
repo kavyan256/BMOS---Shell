@@ -1,0 +1,5 @@
+site_name: bmos-shell
+site_description: a custom shell built in rust
+docs_dir: docs
+plugins:
+  - techdocs-core
